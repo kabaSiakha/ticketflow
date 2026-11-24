@@ -1,0 +1,35 @@
+services:
+  # Interface React servie par nginx : http://localhost:8000
+  frontend:
+    build: ./frontend
+    ports:
+      - "8000:8080"
+    depends_on:
+      - backend
+
+  # API ASP.NET Core : http://localhost:5000 (publiée pour la tester directement)
+  backend:
+    build: ./backend
+    ports:
+      - "5000:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Base PostgreSQL : joignable seulement par le backend, sur le réseau interne
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ticketflow
+      POSTGRES_PASSWORD: ticketflow123
+      POSTGRES_DB: ticketflow
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ticketflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db-data:
