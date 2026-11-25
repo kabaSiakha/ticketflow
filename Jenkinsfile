@@ -3,11 +3,6 @@
 pipeline {
   agent any
 
-  environment {
-    // Destinataire des notifications
-    NOTIFY_EMAIL = 'siakha.kaba01@gmail.com'
-  }
-
   options {
     buildDiscarder(logRotator(numToKeepStr: '10'))
     disableConcurrentBuilds()
@@ -57,32 +52,18 @@ pipeline {
       echo "Images construites : ticketflow-backend:${env.TAG} et ticketflow-frontend:${env.TAG}"
     }
 
-    // Build en échec : mail avec le lien vers la console.
+    // Build en échec : même écriture que le test "Test Jenkins 1" qui fonctionne.
     failure {
-      mail(
-        to: env.NOTIFY_EMAIL,
-        subject: "ÉCHEC — ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-        mimeType: 'text/html',
-        body: """
-          <p>Le build <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b> a échoué.</p>
-          <p>Commit : ${env.TAG ?: 'inconnu'}</p>
-          <p><a href="${env.BUILD_URL}console">Ouvrir la console du build</a></p>
-        """
-      )
+      mail to: 'siakha.kaba01@gmail.com',
+           subject: "ECHEC - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+           body: "Le build ${env.JOB_NAME} #${env.BUILD_NUMBER} a échoué (commit ${env.TAG ?: 'inconnu'}).\nConsole : ${env.BUILD_URL}console"
     }
 
     // Premier build vert après un échec : mail de rétablissement.
     fixed {
-      mail(
-        to: env.NOTIFY_EMAIL,
-        subject: "RÉTABLI — ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-        mimeType: 'text/html',
-        body: """
-          <p>Le build <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b> est de nouveau vert.</p>
-          <p>Commit : ${env.TAG}</p>
-          <p><a href="${env.BUILD_URL}">Voir le build</a></p>
-        """
-      )
+      mail to: 'siakha.kaba01@gmail.com',
+           subject: "RETABLI - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+           body: "Le build ${env.JOB_NAME} #${env.BUILD_NUMBER} est de nouveau vert (commit ${env.TAG}).\nBuild : ${env.BUILD_URL}"
     }
   }
 }
