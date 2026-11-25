@@ -1,7 +1,7 @@
 # Backend TicketFlow (API ASP.NET Core) : build multi-étapes, utilisateur non-root
 
 # Étape "build" : compiler avec le SDK .NET
-FROMM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Dépendances d'abord : cette couche reste en cache tant que le .csproj ne change pas
