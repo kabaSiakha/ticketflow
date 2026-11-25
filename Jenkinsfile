@@ -3,6 +3,11 @@
 pipeline {
   agent any
 
+  environment {
+    // Destinataire des notifications
+    NOTIFY_EMAIL = 'siakha.kaba01@gmail.com'
+  }
+
   options {
     buildDiscarder(logRotator(numToKeepStr: '10'))
     disableConcurrentBuilds()
@@ -52,27 +57,24 @@ pipeline {
       echo "Images construites : ticketflow-backend:${env.TAG} et ticketflow-frontend:${env.TAG}"
     }
 
-    // Build en échec : mail avec le journal en pièce jointe.
-    // $DEFAULT_RECIPIENTS = les destinataires saisis dans la configuration de Jenkins,
-    // pour ne pas publier d'adresse mail dans ce fichier versionné.
+    // Build en échec : mail avec le lien vers la console.
     failure {
-      emailext(
-        to: '$DEFAULT_RECIPIENTS',
+      mail(
+        to: env.NOTIFY_EMAIL,
         subject: "ÉCHEC — ${env.JOB_NAME} #${env.BUILD_NUMBER}",
         mimeType: 'text/html',
-        attachLog: true,
         body: """
           <p>Le build <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b> a échoué.</p>
           <p>Commit : ${env.TAG ?: 'inconnu'}</p>
-          <p><a href="${env.BUILD_URL}console">Ouvrir la console du build</a> (journal joint à ce mail).</p>
+          <p><a href="${env.BUILD_URL}console">Ouvrir la console du build</a></p>
         """
       )
     }
 
     // Premier build vert après un échec : mail de rétablissement.
     fixed {
-      emailext(
-        to: '$DEFAULT_RECIPIENTS',
+      mail(
+        to: env.NOTIFY_EMAIL,
         subject: "RÉTABLI — ${env.JOB_NAME} #${env.BUILD_NUMBER}",
         mimeType: 'text/html',
         body: """
