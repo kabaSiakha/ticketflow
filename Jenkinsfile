@@ -1,5 +1,5 @@
-// Pipeline TicketFlow : vérifier la configuration Docker, puis construire
-// les images du backend et du frontend à chaque push.
+// Pipeline TicketFlow : vérifier la configuration Docker, construire les images
+// du backend et du frontend en parallèle à chaque push, et prévenir par mail en cas d'échec.
 pipeline {
   agent any
 
@@ -28,15 +28,21 @@ pipeline {
       }
     }
 
-    stage('Build backend') {
-      steps {
-        sh 'docker build -t ticketflow-backend:$TAG backend'
-      }
-    }
-
-    stage('Build frontend') {
-      steps {
-        sh 'docker build -t ticketflow-frontend:$TAG frontend'
+    // Les deux images sont indépendantes : on les construit en même temps.
+    stage('Build des images') {
+      // Si l'une des deux constructions échoue, l'autre est arrêtée aussitôt.
+      failFast true
+      parallel {
+        stage('Build backend') {
+          steps {
+            sh 'docker build -t ticketflow-backend:$TAG backend'
+          }
+        }
+        stage('Build frontend') {
+          steps {
+            sh 'docker build -t ticketflow-frontend:$TAG frontend'
+          }
+        }
       }
     }
   }
@@ -45,8 +51,36 @@ pipeline {
     success {
       echo "Images construites : ticketflow-backend:${env.TAG} et ticketflow-frontend:${env.TAG}"
     }
+
+    // Build en échec : mail avec le journal en pièce jointe.
+    // $DEFAULT_RECIPIENTS = les destinataires saisis dans la configuration de Jenkins,
+    // pour ne pas publier d'adresse mail dans ce fichier versionné.
     failure {
-      echo "Échec : ouvre l'étape en rouge et lis la fin de sa sortie."
+      emailext(
+        to: '$DEFAULT_RECIPIENTS',
+        subject: "ÉCHEC — ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+        mimeType: 'text/html',
+        attachLog: true,
+        body: """
+          <p>Le build <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b> a échoué.</p>
+          <p>Commit : ${env.TAG ?: 'inconnu'}</p>
+          <p><a href="${env.BUILD_URL}console">Ouvrir la console du build</a> (journal joint à ce mail).</p>
+        """
+      )
+    }
+
+    // Premier build vert après un échec : mail de rétablissement.
+    fixed {
+      emailext(
+        to: '$DEFAULT_RECIPIENTS',
+        subject: "RÉTABLI — ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+        mimeType: 'text/html',
+        body: """
+          <p>Le build <b>${env.JOB_NAME} #${env.BUILD_NUMBER}</b> est de nouveau vert.</p>
+          <p>Commit : ${env.TAG}</p>
+          <p><a href="${env.BUILD_URL}">Voir le build</a></p>
+        """
+      )
     }
   }
 }
