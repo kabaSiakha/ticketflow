@@ -1,5 +1,5 @@
 // Pipeline TicketFlow : vérifier la configuration Docker, construire les images
-// du backend et du frontend en parallèle à chaque push, et prévenir par mail en cas d'échec.
+// du backend et du frontend en parallèle à chaque push, et envoyer un mail après chaque build, réussi ou en échec.
 pipeline {
   agent any
 
@@ -48,22 +48,19 @@ pipeline {
   }
 
   post {
+    // Build réussi : un mail à chaque fois.
     success {
       echo "Images construites : ticketflow-backend:${env.TAG} et ticketflow-frontend:${env.TAG}"
+      mail to: 'siakha.kaba01@gmail.com',
+           subject: "SUCCES - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+           body: "Le build ${env.JOB_NAME} #${env.BUILD_NUMBER} a réussi (commit ${env.TAG}).\nImages : ticketflow-backend:${env.TAG} et ticketflow-frontend:${env.TAG}\nBuild : ${env.BUILD_URL}"
     }
 
-    // Build en échec : même écriture que le test "Test Jenkins 1" qui fonctionne.
+    // Build en échec : un mail à chaque fois, avec le lien vers la console.
     failure {
       mail to: 'siakha.kaba01@gmail.com',
            subject: "ECHEC - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
            body: "Le build ${env.JOB_NAME} #${env.BUILD_NUMBER} a échoué (commit ${env.TAG ?: 'inconnu'}).\nConsole : ${env.BUILD_URL}console"
-    }
-
-    // Premier build vert après un échec : mail de rétablissement.
-    fixed {
-      mail to: 'siakha.kaba01@gmail.com',
-           subject: "RETABLI - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-           body: "Le build ${env.JOB_NAME} #${env.BUILD_NUMBER} est de nouveau vert (commit ${env.TAG}).\nBuild : ${env.BUILD_URL}"
     }
   }
 }
